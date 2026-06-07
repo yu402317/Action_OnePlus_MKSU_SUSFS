@@ -214,6 +214,17 @@ jobs:
           patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
           echo "完成"
 
+      - name: Fix SUSFS compilation errors
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          # 修复 task_mmu.c 中 SUSFS 补丁导致的 unused variable/label 编译错误
+          if grep -q "struct dentry \*dentry;" fs/proc/task_mmu.c; then
+            sed -i 's/^\(\s*\)struct dentry \*dentry;/\1\/\/ struct dentry *dentry; \/* SUSFS fix: unused variable *\//' fs/proc/task_mmu.c
+          fi
+          if grep -q "^bypass:" fs/proc/task_mmu.c; then
+            sed -i 's/^bypass:/\/\/ bypass: \/* SUSFS fix: unused label *\//' fs/proc/task_mmu.c
+          fi
+
       - name: Apply Hide Stuff Patches
         run: |
           cd kernel_workspace/kernel_platform/common
